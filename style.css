@@ -1,0 +1,15 @@
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: blueviolet;
+    height: 100vh;
+}
+.box {
+    width: 300px;
+    height: 90px;
+    background-color: brown;
+    align-items: center;
+    text-align: center;
+    color: aliceblue;
+}
