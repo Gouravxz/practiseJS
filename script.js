@@ -16,3 +16,5 @@ age = null;
 // so thsese are samee values but when i change tha variable.....
 fullName = "mohan dash"
 dob =  ("19/06/2025");
+console.log(fullName);
+console.log(dob);
