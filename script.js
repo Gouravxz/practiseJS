@@ -10,3 +10,9 @@ isFollow = true;
 number = 30;
 // now print
 console.log(name);
+// now prc null and undefined
+name = undefined;
+age = null;
+// so thsese are samee values but when i change tha variable.....
+fullName = "mohan dash"
+dob =  ("19/06/2025");
