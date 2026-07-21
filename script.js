@@ -18,3 +18,24 @@ fullName = "mohan dash"
 dob =  ("19/06/2025");
 console.log(fullName);
 console.log(dob);
+// 1. Practice finding the longest word in a sentence
+function findLongestWord(str) {
+  // Convert the string into an array of words
+  const words = str.split(" ");
+  let longestWord = "";
+
+  // Loop through each word to check its length
+  for (let i = 0; i < words.length; i++) {
+    if (words[i].length > longestWord.length) {
+      longestWord = words[i];
+    }
+  }
+
+  // Return the result
+  return longestWord;
+}
+
+const sentence = "JavaScript is a very powerful programming language";
+const result = findLongestWord(sentence);
+
+console.log("The longest word is: " + result); // Output: programming
