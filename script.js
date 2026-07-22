@@ -1,6 +1,4 @@
 //practice java script print and alert
-alert("Welcome to our website");
-console.log("hello world");
 console.log("welcome");
 console.log("wow how's the css");
 // variables
@@ -18,3 +16,11 @@ fullName = "mohan dash"
 dob =  ("19/06/2025");
 console.log(fullName);
 console.log(dob);
+//today i learn oprators
+let a = 90;
+let b = 90;
+console.log(a+b);
+console.log(a-b);
+console.log(a*b);
+console.log(a/b);
+console.log(a%b);
