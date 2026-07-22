@@ -28,3 +28,9 @@ body {
 h2 {
     color: black;
 }
+.l2 {
+      color: red;
+      background-color: orange;
+      border-radius: 10px;
+}
+      
