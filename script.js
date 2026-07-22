@@ -67,4 +67,5 @@ console.log(a/b);
 console.log(a%b);
 let score = 90;
 console.log(score);
-
+let grade = "a";
+console.log(a);
