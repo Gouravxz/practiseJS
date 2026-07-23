@@ -26,3 +26,14 @@ let finalBill = total - discount;
 console.log("final bill is: ", finalbill);
 console.log("your total bill without discount is;", total);
 console.log("name:",name , "tshirt:", item1Price , "shirt:", item2Price , "discount on:", discount , "your total bill:", total , "final pay bill:", finalBill);
+let product = {
+    itemName: "Pen",
+    rate: 99,
+    isAvalibe: true,
+    discount: 9,
+}
+let pay = product.rate - product.discount;
+console.log("details:", product);
+console.log(product.rate);
+console.log("finalpay", pay);
+
