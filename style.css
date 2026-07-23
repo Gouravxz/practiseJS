@@ -33,4 +33,7 @@ h2 {
       background-color: orange;
       border-radius: 10px;
 }
+.box {
+    background: linear-gradient(to bottom, #c00d6c, #c98f32, #e50914);
+}
       
