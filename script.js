@@ -23,7 +23,7 @@ let discount = 100;
 const costmerName = "amitkumar";
 let total = item1Price + item2Price;
 let finalBill = total - discount;
-console.log("final bill is: ", finalbill);
+console.log("final bill is: ", finalBill);
 console.log("your total bill without discount is;", total);
 console.log("name:",name , "tshirt:", item1Price , "shirt:", item2Price , "discount on:", discount , "your total bill:", total , "final pay bill:", finalBill);
 let product = {
@@ -36,4 +36,12 @@ let pay = product.rate - product.discount;
 console.log("details:", product);
 console.log(product.rate);
 console.log("finalpay", pay);
+// create a const object called profile
+const profile = {
+    name: "Gourav",
+    post: 256,
+    follower: 1000,
+    isFollow: false,
+}
+console.log(profile);
 
