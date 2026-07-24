@@ -59,3 +59,17 @@ for (let i = 1; i <=x; i++) {
     sum = sum + i;
 }
 console.log("sum = ", sum);
+// for of loop
+let lan = "javascript";
+for(let z of lan) {
+    console.log("lan =", z);
+}
+//ptint  1 to 100 num using loops
+for (let y = 1; y <= 100; y++) {
+    if (y%2 === 0)
+    console.log("numbers even num =", y);
+}
+for (let b = 1; b <= 100; b++) {
+    if (b%2 !== 0)
+    console.log("numbers odd num =", b);
+}
