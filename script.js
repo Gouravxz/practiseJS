@@ -73,3 +73,10 @@ for (let b = 1; b <= 100; b++) {
     if (b%2 !== 0)
     console.log("numbers odd num =", b);
 }
+// make a number gussing game 
+let gameNum = 89;
+let userNum = prompt("let guees tha num");
+while (userNum != gameNum); {
+  userNum = prompt("You enter wrong please try again!");
+ }
+console.log("congrantes you winner");
