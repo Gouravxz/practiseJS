@@ -3,11 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-
+    <title>Arya Server - Connection Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #0d0e15;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .card {
+            background: #151621;
+            border: 1px solid #2d2d42;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.15);
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(167, 139, 250, 0.1);
+            color: #a78bfa;
+            border: 1px solid #7c3aed;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+        h1 {
+            font-size: 26px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        p {
+            color: #9ca3af;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+        .status-box {
+            background: #0f1017;
+            border: 1px solid #2d2d42;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+        .status-item .label {
+            color: #6b7280;
+        }
+        .status-item .value {
+            color: #c084fc;
+            font-weight: 600;
+        }
+        .pulse-dot {
+            height: 10px;
+            width: 10px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #10b981;
+            margin-right: 6px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.3s opacity;
+        }
+        .btn:active {
+            opacity: 0.8;
+        }
+    </style>
 </head>
 <body>
-    
+
+    <div class="card">
+        <span class="badge">ARYA GATEWAY ONLINE</span>
+        <h1>Connection Success! 🎉</h1>
+        <p>Aapka Arya Browser aur Local Server aapas mein perfectly connect ho chuke hain.</p>
+
+        <div class="status-box">
+            <div class="status-item">
+                <span class="label">Server Status:</span>
+                <span class="value" style="color: #10b981;"><span class="pulse-dot"></span> Active</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Target Port:</span>
+                <span class="value">3000</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Loaded Path:</span>
+                <span class="value" id="current-path">/index.html</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Client Time:</span>
+                <span class="value" id="time-display">--:--:--</span>
+            </div>
+        </div>
+
+        <button class="btn" onclick="testAlert()">Test JS Alert Interaction</button>
+    </div>
+
+    <script>
+        // Set dynamic values
+        document.getElementById('current-path').innerText = window.location.pathname;
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('time-display').innerText = now.toLocaleTimeString();
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        function testAlert() {
+            alert("JS Integration Working Properly on Arya Browser!");
+        }
+    </script>
 </body>
-<script src="new.js"></script>
 </html>
