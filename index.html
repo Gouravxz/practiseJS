@@ -2,6 +2,417 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>1KM GTA Open World Engine</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #hud-overlay {
+            position: absolute; top: 15px; left: 15px; color: #fff;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);
+            padding: 12px 18px; border-radius: 10px; font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2); z-index: 10; pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        #hud-overlay h3 { color: #48dbfb; margin-bottom: 5px; font-size: 14px; text-transform: uppercase; }
+
+        /* GOL CROSSHAIR / TARGET CURSOR FOR CHARACTER */
+        #crosshair-cursor {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 16px; height: 16px;
+            transform: translate(-50%, -50%);
+            border: 2px solid rgba(255, 255, 255, 0.85);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 15;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+        }
+        #crosshair-cursor::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 4px; height: 4px;
+            background: #48dbfb;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #mobile-controls { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; pointer-events: none; }
+        .steer-buttons { position: absolute; bottom: 25px; left: 25px; display: flex; gap: 15px; pointer-events: auto; }
+        .pedal-buttons { position: absolute; bottom: 25px; right: 25px; display: flex; gap: 15px; pointer-events: auto; }
+
+        .btn-touch {
+            width: 65px; height: 65px; border-radius: 50%;
+            background: rgba(0, 0, 0, 0.75); border: 2px solid rgba(255, 255, 255, 0.3);
+            color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+        .btn-touch:active { transform: scale(0.90); }
+        #btn-left, #btn-right { background: rgba(52, 152, 219, 0.85); }
+        #btn-gas { background: rgba(46, 204, 113, 0.85); }
+        #btn-reverse { background: rgba(231, 76, 60, 0.85); }
+    </style>
+
+    <!-- THREE.JS ENGINE & LIBRARIES -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="car.js"></script>
+    <script src="character.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    <div id="crosshair-cursor"></div>
+
+    <div id="hud-overlay">
+        <h3>🏙️ 1KM GTA Open World</h3>
+        🚘 <b>AI Traffic:</b> Real Proportional Bus & Police Cars<br>
+        👤 <b>Character:</b> Ground Aligned Leg Movement<br>
+        💡 <b>Environment:</b> Multi-Lane Highways Grid<br>
+        🎯 <b>Crosshair:</b> Aim Cursor Active
+    </div>
+
+    <div id="mobile-controls">
+        <div class="steer-buttons">
+            <div id="btn-left" class="btn-touch">◀️</div>
+            <div id="btn-right" class="btn-touch">▶️</div>
+        </div>
+        <div class="pedal-buttons">
+            <div id="btn-reverse" class="btn-touch">⬇️</div>
+            <div id="btn-gas" class="btn-touch">⬆️</div>
+        </div>
+    </div>
+
+    <script>
+        const MAP_SIZE = 1000;
+        const HIGHWAY_WIDTH = 18;
+
+        window.touchControls = { left: false, right: false, gas: false, reverse: false };
+        window.carArray = [];
+        window.trafficVehicles = [];
+
+        // 1. THREE.JS SCENE PIPELINE
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x7ec0ee);
+        scene.fog = new THREE.FogExp2(0x7ec0ee, 0.0012);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // 2. LIGHTING ENGINE
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.4);
+        sunLight.position.set(300, 450, 200);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 1500;
+        const shadowDist = 400;
+        sunLight.shadow.camera.left = -shadowDist;
+        sunLight.shadow.camera.right = shadowDist;
+        sunLight.shadow.camera.top = shadowDist;
+        sunLight.shadow.camera.bottom = -shadowDist;
+        scene.add(sunLight);
+
+        // 3. TEXTURE LOADERS
+        const textureLoader = new THREE.TextureLoader();
+
+        const grassTexture = textureLoader.load('textures/grass.jpg');
+        grassTexture.wrapS = THREE.RepeatWrapping;
+        grassTexture.wrapT = THREE.RepeatWrapping;
+        grassTexture.repeat.set(60, 60);
+
+        const roadTexture = textureLoader.load('textures/asphalt.jpg');
+        roadTexture.wrapS = THREE.RepeatWrapping;
+        roadTexture.wrapT = THREE.RepeatWrapping;
+        roadTexture.repeat.set(1, 40);
+
+        function generateWaterTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+            gradient.addColorStop(0, '#005588');
+            gradient.addColorStop(0.5, '#0077aa');
+            gradient.addColorStop(1, '#003366');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            for (let i = 0; i < 500; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random() * 512, Math.random() * 512, Math.random() * 20 + 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(20, 20);
+            return texture;
+        }
+
+        const waterTexture = generateWaterTexture();
+
+        // 4. LAND & EXPANDED HIGHWAY NETWORK
+        const islandGroup = new THREE.Group();
+
+        const landGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE);
+        const landMat = new THREE.MeshStandardMaterial({ map: grassTexture, roughness: 0.9, metalness: 0.1 });
+        const landMesh = new THREE.Mesh(landGeo, landMat);
+        landMesh.rotation.x = -Math.PI / 2;
+        landMesh.receiveShadow = true;
+        islandGroup.add(landMesh);
+
+        const highwayMat = new THREE.MeshStandardMaterial({ map: roadTexture, roughness: 0.6 });
+        const roadGeoH = new THREE.PlaneGeometry(MAP_SIZE - 60, HIGHWAY_WIDTH);
+        const roadGeoV = new THREE.PlaneGeometry(HIGHWAY_WIDTH, MAP_SIZE - 60);
+
+        const roadOffset = (MAP_SIZE / 2) - 60; // 440m from center
+
+        // OUTER HIGHWAYS
+        const northHwy = new THREE.Mesh(roadGeoH, highwayMat);
+        northHwy.rotation.x = -Math.PI / 2; northHwy.position.set(0, 0.05, -roadOffset);
+        northHwy.receiveShadow = true; islandGroup.add(northHwy);
+
+        const southHwy = new THREE.Mesh(roadGeoH, highwayMat);
+        southHwy.rotation.x = -Math.PI / 2; southHwy.position.set(0, 0.05, roadOffset);
+        southHwy.receiveShadow = true; islandGroup.add(southHwy);
+
+        const eastHwy = new THREE.Mesh(roadGeoV, highwayMat);
+        eastHwy.rotation.x = -Math.PI / 2; eastHwy.position.set(roadOffset, 0.05, 0);
+        eastHwy.receiveShadow = true; islandGroup.add(eastHwy);
+
+        const westHwy = new THREE.Mesh(roadGeoV, highwayMat);
+        westHwy.rotation.x = -Math.PI / 2; westHwy.position.set(-roadOffset, 0.05, 0);
+        westHwy.receiveShadow = true; islandGroup.add(westHwy);
+
+        // INNER CROSS HIGHWAYS FOR MORE COMPLEX ROADS
+        const innerHwyH = new THREE.Mesh(new THREE.PlaneGeometry(MAP_SIZE - 120, HIGHWAY_WIDTH), highwayMat);
+        innerHwyH.rotation.x = -Math.PI / 2; innerHwyH.position.set(0, 0.05, 0);
+        islandGroup.add(innerHwyH);
+
+        const innerHwyV = new THREE.Mesh(new THREE.PlaneGeometry(HIGHWAY_WIDTH, MAP_SIZE - 120), highwayMat);
+        innerHwyV.rotation.x = -Math.PI / 2; innerHwyV.position.set(0, 0.05, 0);
+        islandGroup.add(innerHwyV);
+
+        scene.add(islandGroup);
+
+        // 5. STREETLIGHT POLES NETWORK
+        function createStreetLight(x, z, rotY) {
+            const poleGroup = new THREE.Group();
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 7, 8), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 }));
+            pole.position.y = 3.5;
+            poleGroup.add(pole);
+
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 1.8), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+            arm.position.set(0, 6.8, 0.8);
+            poleGroup.add(arm);
+
+            const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.15, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0a0, emissiveIntensity: 1.0 }));
+            lamp.position.set(0, 6.7, 1.5);
+            poleGroup.add(lamp);
+
+            poleGroup.position.set(x, 0, z);
+            poleGroup.rotation.y = rotY;
+            scene.add(poleGroup);
+        }
+
+        for (let pos = -roadOffset + 40; pos <= roadOffset - 40; pos += 60) {
+            createStreetLight(pos, -roadOffset - 11, 0);
+            createStreetLight(pos, roadOffset + 11, Math.PI);
+            createStreetLight(-roadOffset - 11, pos, Math.PI / 2);
+            createStreetLight(roadOffset + 11, pos, -Math.PI / 2);
+        }
+
+        // 6. PONDS & MOUNTAINS
+        function createPond(x, z, radius) {
+            const pondMesh = new THREE.Mesh(new THREE.CircleGeometry(radius, 32), new THREE.MeshStandardMaterial({ map: waterTexture, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+            pondMesh.rotation.x = -Math.PI / 2;
+            pondMesh.position.set(x, 0.03, z);
+            scene.add(pondMesh);
+        }
+        createPond(140, -120, 40);
+        createPond(-120, 160, 45);
+
+        function createMountain(x, z, radius, height) {
+            const mountain = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 8), new THREE.MeshStandardMaterial({ color: 0x4a5d4e, roughness: 0.9, flatShading: true }));
+            mountain.position.set(x, height / 2, z);
+            scene.add(mountain);
+        }
+        createMountain(280, 280, 95, 85);
+        createMountain(-280, -280, 105, 90);
+
+        // 7. INLAND RIVER & OCEAN
+        const riverMesh = new THREE.Mesh(new THREE.PlaneGeometry(50, MAP_SIZE - 200), new THREE.MeshStandardMaterial({ map: waterTexture, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.85 }));
+        riverMesh.rotation.x = -Math.PI / 2;
+        riverMesh.position.set(-180, 0.02, 0);
+        scene.add(riverMesh);
+
+        const seaMesh = new THREE.Mesh(new THREE.PlaneGeometry(3500, 3500), new THREE.MeshStandardMaterial({ map: waterTexture, roughness: 0.05, metalness: 0.9, transparent: true, opacity: 0.85 }));
+        seaMesh.rotation.x = -Math.PI / 2;
+        seaMesh.position.y = -1.2;
+        scene.add(seaMesh);
+
+        // 8. GLTF LOADER SYSTEM (MODELS/ FOLDER)
+        const gltfLoader = new THREE.GLTFLoader();
+
+        // A. REALISTIC AI TRAFFIC (Bus, Policecar & Civilian Cars WITH PROPORTIONAL SCALES)
+        function spawnAITrafficVehicle(modelPath, startX, startZ, speed, scaleVal, rotY = 0) {
+            gltfLoader.load(modelPath, function (gltf) {
+                const vehicle = gltf.scene;
+                vehicle.scale.set(scaleVal, scaleVal, scaleVal); // EXACT SIZE ADJUSTED
+                vehicle.position.set(startX, 0.2, startZ);
+                vehicle.rotation.y = rotY;
+
+                vehicle.traverse((node) => {
+                    if (node.isMesh) {
+                        node.castShadow = true;
+                        node.receiveShadow = true;
+                    }
+                });
+
+                scene.add(vehicle);
+
+                // Add to Traffic Loop Engine
+                window.trafficVehicles.push({
+                    mesh: vehicle,
+                    speed: speed,
+                    axis: 'x', // Driving along X axis highway
+                    direction: 1
+                });
+            }, undefined, (err) => console.log("Traffic load info:", err));
+        }
+
+        // Bus scale reduced to 0.18 for realistic bus size!
+        spawnAITrafficVehicle('Models/Bus.glb', -200, roadOffset - 4, 0.35, 0.18, Math.PI / 2);
+        spawnAITrafficVehicle('Models/Policecar.glb', 150, -roadOffset + 4, 0.65, 1.2, -Math.PI / 2);
+        spawnAITrafficVehicle('Models/Car1.glb', -100, roadOffset + 4, 0.55, 1.2, Math.PI / 2);
+
+        // B. SPAWN TREES (STRICT LAND LOCKED)
+        function spawnTrees(filePath, sideOffset, spacing, scaleVal) {
+            gltfLoader.load(filePath, function (gltf) {
+                const treeModel = gltf.scene;
+                treeModel.scale.set(scaleVal, scaleVal, scaleVal);
+                const treeBound = roadOffset - 35;
+
+                for (let x = -treeBound; x <= treeBound; x += spacing) {
+                    const t1 = treeModel.clone();
+                    t1.position.set(x, 0, -roadOffset + sideOffset);
+                    scene.add(t1);
+
+                    const t2 = treeModel.clone();
+                    t2.position.set(x, 0, roadOffset - sideOffset);
+                    scene.add(t2);
+                }
+            });
+        }
+        spawnTrees('Models/Tree.glb', -25, 45, 2.5);
+        spawnTrees('Models/Tree2.glb', 20, 60, 2.2);
+
+        // C. SPAWN HOUSES (REALISTIC VILLA & BUILDING SCALES)
+        function spawnHouses(filePath, spacing, sideOffset, scaleVal) {
+            gltfLoader.load(filePath, function (gltf) {
+                const houseModel = gltf.scene;
+                houseModel.scale.set(scaleVal, scaleVal, scaleVal);
+                const houseBound = roadOffset - 40;
+
+                for (let z = -houseBound; z <= houseBound; z += spacing) {
+                    const h1 = houseModel.clone();
+                    h1.position.set(-roadOffset - sideOffset, 0, z);
+                    h1.rotation.y = Math.PI / 2;
+                    scene.add(h1);
+
+                    const h2 = houseModel.clone();
+                    h2.position.set(roadOffset + sideOffset, 0, z);
+                    h2.rotation.y = -Math.PI / 2;
+                    scene.add(h2);
+                }
+            });
+        }
+        spawnHouses('Models/House.glb', 120, 28, 9.0);
+        spawnHouses('Models/House2.glb', 160, 32, 11.0);
+        spawnHouses('Models/House3.glb', 200, 35, 10.0);
+
+        // 9. MOBILE CONTROLS LISTENERS
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnGas = document.getElementById('btn-gas');
+        const btnReverse = document.getElementById('btn-reverse');
+
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); window.touchControls.left = true; });
+        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); window.touchControls.left = false; });
+
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); window.touchControls.right = true; });
+        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); window.touchControls.right = false; });
+
+        btnGas.addEventListener('touchstart', (e) => { e.preventDefault(); window.touchControls.gas = true; });
+        btnGas.addEventListener('touchend', (e) => { e.preventDefault(); window.touchControls.gas = false; });
+
+        btnReverse.addEventListener('touchstart', (e) => { e.preventDefault(); window.touchControls.reverse = true; });
+        btnReverse.addEventListener('touchend', (e) => { e.preventDefault(); window.touchControls.reverse = false; });
+
+        // 10. GLOBAL BRIDGE FOR CAR.JS & CHARACTER.JS
+        window.gameWorld = {
+            scene: scene,
+            camera: camera,
+            mapSize: MAP_SIZE,
+            addCarToArray: function(carMesh, spawnX = 0, spawnZ = roadOffset) {
+                carMesh.position.set(spawnX, 0.6, spawnZ);
+                scene.add(carMesh);
+                window.carArray.push(carMesh);
+                console.log("🏎️ Player Car Registered!");
+            }
+        };
+
+        // 11. RENDER ENGINE & AI TRAFFIC MOVEMENTS
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            // Water Wave Animation
+            waterTexture.offset.x += delta * 0.02;
+            waterTexture.offset.y += delta * 0.02;
+
+            // UPDATE AI TRAFFIC VEHICLES STRAIGHT HIGHWAY DRIVING
+            window.trafficVehicles.forEach((item) => {
+                item.mesh.position.x += item.speed * item.direction;
+                // Reverse direction along highway lane limits
+                if (Math.abs(item.mesh.position.x) > roadOffset) {
+                    item.direction *= -1;
+                    item.mesh.rotation.y += Math.PI;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PraticejavaScript</title>
     <link rel="stylesheet" href="style.css">
