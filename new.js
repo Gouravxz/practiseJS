@@ -27,7 +27,7 @@ let percentage = (totalMarks / 500) * 100;
 let isPassed = percentage >= 40 && maths >= 33 && science >= 33 && english >= 33 && hindi >= 33 && computer >= 33;
 
 let status; // Status variable me 'PASSED' ya 'FAILED' store karenge
-if (isPassed) {
+if (isPassed) {はにはやみはまなはかもがま
   status = "PASSED";
 } else {
   status = "FAILED";
